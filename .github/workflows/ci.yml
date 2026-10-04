@@ -12,7 +12,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - uses: astral-sh/setup-uv@v6
-        with: { python-version: "3.11" }
+        with: { python-version: "3.11", activate-environment: true }
       - run: sudo apt-get update && sudo apt-get install -y ffmpeg
       - run: uv pip install -e ".[dev,onnx]" playwright && python -m playwright install --with-deps chromium
       - name: Unit tests
@@ -30,7 +30,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - uses: astral-sh/setup-uv@v6
-        with: { python-version: "3.11" }
+        with: { python-version: "3.11", activate-environment: true }
       - run: brew install ffmpeg ollama
       - name: Start Ollama and pull a small model
         run: |
@@ -47,3 +47,11 @@ jobs:
           python -m voicenotes process tests/fixtures/audio/urdu_todo.wav \
             --backend mlx --model small --vault "$RUNNER_TEMP/vault"
           cat "$RUNNER_TEMP"/vault/Voice\ Notes/*.md
+      - name: Build app bundle and installer DMG
+        run: |
+          scripts/build_mac_app.sh "$PWD/.venv" "$RUNNER_TEMP/apps"
+          scripts/make_dmg.sh dist/VoiceNotes-Installer.dmg
+      - uses: actions/upload-artifact@v4
+        with:
+          name: VoiceNotes-Installer
+          path: dist/VoiceNotes-Installer.dmg
