@@ -99,3 +99,12 @@ def test_silent_audio_rejected(tmp_path):
 def test_keep_audio_off(tmp_path):
     r = make(tmp_path, keep_audio=False).run(AUDIO / "urdu_todo.wav")
     assert r.audio_path is None
+
+
+def test_missing_model_gives_single_clear_warning(tmp_path):
+    llm = smart_llm()
+    llm.has_model = lambda: False
+    r = make(tmp_path, llm=llm).run(AUDIO / "urdu_todo.wav", save=False)
+    assert llm.calls == []
+    assert all("ollama pull gemma3:12b" in w for w in r.warnings if "AI model" in w)
+    assert sum("not downloaded" in w for w in r.warnings) == 2  # translation fallback + skipped cleanup

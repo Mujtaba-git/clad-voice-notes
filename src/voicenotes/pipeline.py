@@ -74,19 +74,35 @@ class Pipeline:
         shutil.copy2(path, dest)
         return str(dest)
 
+    def llm_problem(self) -> str | None:
+        """None if the local LLM is ready, else a short explanation (checked once per run)."""
+        if not hasattr(self, "_llm_problem"):
+            s = self.settings
+            problem = None
+            if not self.llm.is_available():
+                problem = f"Ollama is not running at {s.ollama_url}"
+            else:
+                try:
+                    if not self.llm.has_model():
+                        problem = f"AI model '{s.llm_model}' is not downloaded (run: ollama pull {s.llm_model})"
+                except LLMError as e:
+                    problem = str(e)
+            self._llm_problem = problem
+        return self._llm_problem
+
     def _to_english(self, samples, transcript_text: str, warnings: list[str], prog) -> str:
         mode = self.settings.translator
         if mode == "none":
             return ""
         if mode == "llm":
-            if self.llm.is_available():
+            if not self.llm_problem():
                 try:
                     tr = self._translator or LLMTranslator(self.llm)
                     return tr.translate(transcript_text, progress=prog)
                 except (LLMError, TranslationError) as e:
                     warnings.append(f"LLM translation failed ({e}); used Whisper's translation instead.")
             else:
-                warnings.append("Ollama is not running; used Whisper's built-in translation instead.")
+                warnings.append(f"{self.llm_problem()}; used Whisper's built-in translation instead.")
         elif mode == "google":
             try:
                 tr = self._translator or GoogleTranslator()
@@ -126,9 +142,10 @@ class Pipeline:
         sub = p.stage("translate", "Translating to English")
         english = self._to_english(samples, original, warnings, sub) if lang == "ur" else original
 
-        llm_ok = (s.clean_text or s.extract_insights) and bool(english) and self.llm.is_available()
-        if (s.clean_text or s.extract_insights) and english and not llm_ok:
-            warnings.append(f"Ollama is not running at {s.ollama_url}; skipped grammar cleanup and key points.")
+        wants_llm = (s.clean_text or s.extract_insights) and bool(english)
+        llm_ok = wants_llm and not self.llm_problem()
+        if wants_llm and not llm_ok:
+            warnings.append(f"{self.llm_problem()}; skipped grammar cleanup and key points.")
         refiner = Refiner(self.llm)
 
         sub = p.stage("clean", "Correcting grammar and structure")

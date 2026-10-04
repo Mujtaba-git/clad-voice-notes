@@ -39,6 +39,8 @@ def cmd_process(args) -> int:
         changes["asr_backend"] = args.backend
     if args.vault:
         changes["vault_dir"] = args.vault
+    if args.llm_model:
+        changes["llm_model"] = args.llm_model
     if changes:
         settings = settings.updated(**changes)
 
@@ -102,6 +104,7 @@ def main(argv: list[str] | None = None) -> int:
     pr.add_argument("--model", help="Whisper model, e.g. large-v3-turbo")
     pr.add_argument("--backend", choices=["auto", "mlx", "faster-whisper", "sherpa-onnx"])
     pr.add_argument("--vault", help="folder to save the note in")
+    pr.add_argument("--llm-model", help="Ollama model, e.g. gemma3:12b")
     pr.add_argument("--no-save", action="store_true")
     pr.set_defaults(func=cmd_process)
 

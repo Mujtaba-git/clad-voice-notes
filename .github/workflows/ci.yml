@@ -45,7 +45,7 @@ jobs:
       - name: Full pipeline on the Urdu fixture
         run: |
           python -m voicenotes process tests/fixtures/audio/urdu_todo.wav \
-            --backend mlx --model small --vault "$RUNNER_TEMP/vault"
+            --backend mlx --model small --llm-model "$VOICENOTES_TEST_LLM" --vault "$RUNNER_TEMP/vault"
           cat "$RUNNER_TEMP"/vault/Voice\ Notes/*.md
       - name: Build app bundle and installer DMG
         run: |
