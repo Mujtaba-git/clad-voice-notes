@@ -94,6 +94,8 @@ class Pipeline:
             except TranslationError as e:
                 warnings.append(f"{e}; used Whisper's translation instead.")
         # "whisper" mode, or fallback
+        if "turbo" in self.settings.asr_model:
+            warnings.append("Whisper large-v3-turbo translates poorly; choose large-v3 for Whisper translation.")
         return self.transcriber.transcribe(samples, "ur", task="translate", progress=prog).text
 
     def run(self, audio_path: str | Path, progress: ProgressFn | None = None, save: bool = True,

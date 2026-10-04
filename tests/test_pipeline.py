@@ -66,6 +66,7 @@ def test_whisper_translation_mode(tmp_path):
     r = make(tmp_path, transcriber=t, translator="whisper").run(AUDIO / "urdu_todo.wav", save=False)
     assert ("ur", "translate") in t.calls
     assert r.english == "Today I will go to the bank."
+    assert any("turbo" in w for w in r.warnings)  # default model is turbo
 
 
 def test_falls_back_to_whisper_when_ollama_down(tmp_path):
