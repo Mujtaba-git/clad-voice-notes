@@ -60,6 +60,14 @@ Add your own recordings to `tests/fixtures/audio/` to check accuracy on your voi
   the Urdu clip (the resulting note is printed in the log). It then builds the
   `.app` and `VoiceNotes-Installer.dmg` (downloadable from the run's *Artifacts*).
 
+## Results from the Apple-Silicon CI run (gemma3:1b, Whisper small)
+
+LLM translation of the Urdu test sentence:
+> "Today, I'm thinking about my new business. I had to go to the bank this morning to submit a loan application. Besides that, I had to call my brother. And in the evening, I need to buy vegetables from the market."
+
+It recovered "loan application" (Whisper translation: "duty of Friday"; Google: "wallet").
+The tiny 1B model did get "sister" wrong and some tenses off. This is why the default for daily use is the 12B model.
+
 ## Note on the development environment
 
 The cloud machine used to build this could not reach Hugging Face or ollama.com. So:

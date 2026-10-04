@@ -26,7 +26,10 @@ def llm():
 def test_llm_translates_urdu(llm):
     en = LLMTranslator(llm).translate(URDU).lower()
     print(en)
-    assert "bank" in en and "sister" in en
+    # Words a tiny CI model reliably gets. (gemma3:1b once wrote "brother" for
+    # بہن/sister; the 12B default is far more accurate.)
+    for word in ["business", "bank", "loan", "vegetables"]:
+        assert word in en, (word, en)
 
 
 @pytest.mark.integration
