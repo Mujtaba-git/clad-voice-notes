@@ -156,7 +156,7 @@ async function refreshStatus() {
     const s = await api("/api/status");
     const b = $("banner");
     if (!s.ollama) {
-      b.innerHTML = "Local AI (Ollama) is not running, so translation falls back to Whisper and grammar cleanup is skipped. Start it with <code>ollama serve</code> or open the Ollama app.";
+      b.innerHTML = "Local AI (Ollama) is not running, so grammar cleanup and to-do extraction are skipped (AI translation falls back to Whisper). Open the Ollama app or run <code>ollama serve</code>.";
     } else if (!s.llm_model_installed) {
       b.innerHTML = `The AI model <b>${s.llm_model}</b> is not downloaded yet. Run <code>ollama pull ${s.llm_model}</code> in Terminal.`;
     } else if (!s.backends.length) {

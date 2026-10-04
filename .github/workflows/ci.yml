@@ -1,0 +1,49 @@
+name: CI
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  linux:
+    name: Linux - unit + Whisper(ONNX) + browser tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v6
+        with: { python-version: "3.11" }
+      - run: sudo apt-get update && sudo apt-get install -y ffmpeg
+      - run: uv pip install -e ".[dev,onnx]" playwright && python -m playwright install --with-deps chromium
+      - name: Unit tests
+        run: pytest -m "not integration" -q
+      - name: Integration tests (real Whisper small, Google translate)
+        run: pytest -m integration -q -rs
+
+  macos:
+    name: macOS (Apple Silicon) - MLX Whisper + Ollama
+    runs-on: macos-14
+    env:
+      VOICENOTES_TEST_BACKEND: mlx
+      VOICENOTES_TEST_MODEL: small
+      VOICENOTES_TEST_LLM: gemma3:1b
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v6
+        with: { python-version: "3.11" }
+      - run: brew install ffmpeg ollama
+      - name: Start Ollama and pull a small model
+        run: |
+          (ollama serve > /tmp/ollama.log 2>&1 &)
+          for i in $(seq 1 30); do curl -sf http://127.0.0.1:11434/api/tags && break; sleep 1; done
+          ollama pull "$VOICENOTES_TEST_LLM"
+      - run: uv pip install -e ".[dev,mac]"
+      - name: Unit tests
+        run: pytest -m "not integration" -q
+      - name: Integration tests (MLX Whisper + real LLM)
+        run: pytest -m integration -q -rs -s --ignore=tests/e2e
+      - name: Full pipeline on the Urdu fixture
+        run: |
+          python -m voicenotes process tests/fixtures/audio/urdu_todo.wav \
+            --backend mlx --model small --vault "$RUNNER_TEMP/vault"
+          cat "$RUNNER_TEMP"/vault/Voice\ Notes/*.md
