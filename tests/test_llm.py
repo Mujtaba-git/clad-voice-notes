@@ -53,3 +53,11 @@ def test_has_model():
     assert c.has_model()
     c.model = "y"
     assert not c.has_model()
+
+
+def test_strip_wrapping_quotes():
+    from voicenotes.llm import strip_wrapping_quotes
+    assert strip_wrapping_quotes("\u201cToday I went.\u201d") == "Today I went."
+    assert strip_wrapping_quotes('"Hello."') == "Hello."
+    assert strip_wrapping_quotes('He said "hi" and "bye"') == 'He said "hi" and "bye"'
+    assert strip_wrapping_quotes('"a" and "b"') == '"a" and "b"'

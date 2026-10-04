@@ -18,6 +18,17 @@ def strip_thinking(text: str) -> str:
     return _THINK.sub("", text).strip()
 
 
+_QUOTES = {'"': '"', "“": "”", "'": "'"}
+
+
+def strip_wrapping_quotes(text: str) -> str:
+    """Small models sometimes wrap their whole answer in quotation marks."""
+    t = text.strip()
+    if len(t) > 1 and t[0] in _QUOTES and t.endswith(_QUOTES[t[0]]) and t.count(t[0]) == 1 + (t[0] == t[-1]):
+        return t[1:-1].strip()
+    return t
+
+
 class OllamaClient:
     def __init__(self, base_url: str = "http://127.0.0.1:11434", model: str = "gemma3:12b",
                  timeout: float = 600.0, num_ctx: int = 8192, transport: httpx.BaseTransport | None = None):
@@ -66,4 +77,5 @@ class OllamaClient:
             raise LLMError(f"Model '{self.model}' not found. Run: ollama pull {self.model}")
         if r.status_code >= 400:
             raise LLMError(f"Ollama error {r.status_code}: {r.text[:300]}")
-        return strip_thinking(r.json().get("message", {}).get("content", ""))
+        content = strip_thinking(r.json().get("message", {}).get("content", ""))
+        return content if format is not None else strip_wrapping_quotes(content)

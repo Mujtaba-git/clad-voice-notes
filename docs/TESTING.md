@@ -68,6 +68,13 @@ LLM translation of the Urdu test sentence:
 It recovered "loan application" (Whisper translation: "duty of Friday"; Google: "wallet").
 The tiny 1B model did get "sister" wrong and some tenses off. This is why the default for daily use is the 12B model.
 
+**Full pipeline with the tiny CI models (Whisper small + gemma3:1b):** every stage ran and
+a complete note was written (title, to-do checkboxes, key points, clean text, translation, Urdu).
+But quality was poor: Whisper-small misheard two words, and the 1B model then invented
+"my new assistant". The CI models prove the *plumbing*. Translation *quality* depends on the
+real defaults (Whisper large-v3-turbo + gemma3:12b), which still need to be evaluated on your
+Mac with your own voice (see ROADMAP step 1).
+
 ## Note on the development environment
 
 The cloud machine used to build this could not reach Hugging Face or ollama.com. So:
