@@ -1,0 +1,14 @@
+{
+  "english_todo": {
+    "language": "en",
+    "text": "Today I want to plan the week for my new project. First, I need to call the bank about the loan application. Second, I should finish the presentation for Monday's meeting. And finally, remember to buy groceries in the evening."
+  },
+  "urdu_todo": {
+    "language": "ur",
+    "text": "آج میں اپنے نئے کاروبار کے بارے میں سوچ رہا تھا۔ مجھے کل صبح بینک جا کر قرض کی درخواست جمع کروانی ہے۔ اس کے علاوہ مجھے اپنی بہن کو فون کرنا ہے۔ اور شام کو بازار سے سبزی خریدنی ہے۔"
+  },
+  "urdu_mixed": {
+    "language": "ur",
+    "text": "میں ایک ایسی ایپلیکیشن بنانا چاہتا ہوں جو میری آواز کو ٹیکسٹ میں بدل دے۔ اس کا مقصد یہ ہے کہ میں اپنے آئیڈیاز کو آسانی سے نوٹ کر سکوں۔"
+  }
+}
