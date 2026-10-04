@@ -1,0 +1,326 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>VoiceNotes</title>
+<style>
+:root {
+  --bg: #f6f5f2; --card: #ffffff; --text: #1d1d1f; --muted: #6b6b70; --line: #e3e1dc;
+  --accent: #1f6f5c; --accent-soft: #e3f1ec; --danger: #c0392b; --warn-bg: #fff6e0; --warn: #8a6100;
+}
+@media (prefers-color-scheme: dark) {
+  :root { --bg: #161618; --card: #202023; --text: #ececee; --muted: #9a9aa2; --line: #333338;
+          --accent: #4fb89c; --accent-soft: #1f3530; --danger: #e5675a; --warn-bg: #3a3020; --warn: #f0c060; }
+}
+* { box-sizing: border-box; }
+body { margin: 0; background: var(--bg); color: var(--text);
+       font: 15px/1.55 -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; }
+main { max-width: 860px; margin: 0 auto; padding: 24px 16px 64px; }
+header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 18px; }
+h1 { font-size: 22px; margin: 0; letter-spacing: -.01em; }
+h2 { font-size: 15px; margin: 0 0 10px; color: var(--muted); font-weight: 600; }
+.card { background: var(--card); border: 1px solid var(--line); border-radius: 14px; padding: 18px; margin-bottom: 16px; }
+button { font: inherit; border: 1px solid var(--line); background: var(--card); color: var(--text);
+         border-radius: 9px; padding: 7px 13px; cursor: pointer; }
+button:hover { border-color: var(--accent); }
+button.primary { background: var(--accent); color: #fff; border-color: var(--accent); }
+button:disabled { opacity: .5; cursor: default; }
+select, input[type=text] { font: inherit; padding: 6px 9px; border-radius: 8px; border: 1px solid var(--line);
+         background: var(--bg); color: var(--text); width: 100%; }
+.recorder { display: flex; align-items: center; gap: 20px; flex-wrap: wrap; }
+#rec { width: 84px; height: 84px; border-radius: 50%; border: 0; background: var(--danger); color: #fff;
+       font-size: 15px; font-weight: 600; flex: none; }
+#rec.on { animation: pulse 1.6s infinite; }
+@keyframes pulse { 0%,100% { box-shadow: 0 0 0 0 rgba(192,57,43,.45); } 50% { box-shadow: 0 0 0 14px rgba(192,57,43,0); } }
+#timer { font: 600 28px ui-monospace, SFMono-Regular, Menlo, monospace; }
+.controls { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; flex: 1; min-width: 220px; }
+.controls label { color: var(--muted); font-size: 13px; }
+.controls select { width: auto; }
+#level { height: 6px; background: var(--line); border-radius: 3px; overflow: hidden; width: 100%; }
+#level div { height: 100%; width: 0; background: var(--accent); transition: width .08s; }
+.drop { border: 1.5px dashed var(--line); border-radius: 12px; padding: 14px; text-align: center; color: var(--muted); margin-top: 14px; }
+.drop.over { border-color: var(--accent); background: var(--accent-soft); }
+.banner { background: var(--warn-bg); color: var(--warn); border-radius: 10px; padding: 10px 14px; margin-bottom: 16px; font-size: 14px; }
+.banner code { background: rgba(0,0,0,.08); padding: 1px 5px; border-radius: 4px; }
+.job { border-top: 1px solid var(--line); padding: 10px 0; display: flex; gap: 12px; align-items: center; cursor: pointer; }
+.job:first-child { border-top: 0; }
+.job .name { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.job .msg { color: var(--muted); font-size: 13px; }
+.bar { height: 5px; background: var(--line); border-radius: 3px; overflow: hidden; width: 140px; flex: none; }
+.bar div { height: 100%; background: var(--accent); }
+.err { color: var(--danger); }
+.tabs { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 12px; }
+.tabs button.active { background: var(--accent-soft); border-color: var(--accent); }
+#out { white-space: pre-wrap; min-height: 80px; }
+#out[dir=rtl] { font-family: "Noto Nastaliq Urdu", "Geeza Pro", serif; font-size: 18px; line-height: 2.1; }
+.meta { color: var(--muted); font-size: 13px; margin-top: 10px; word-break: break-all; }
+.grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px 16px; }
+.grid label { display: block; font-size: 13px; color: var(--muted); margin-bottom: 3px; }
+.grid .full { grid-column: 1 / -1; }
+.check { display: flex; gap: 8px; align-items: center; }
+@media (max-width: 600px) { .grid { grid-template-columns: 1fr; } .bar { width: 70px; } }
+.hidden { display: none !important; }
+</style>
+</head>
+<body>
+<main>
+  <header>
+    <h1>🎙️ VoiceNotes</h1>
+    <button id="settingsBtn">Settings</button>
+  </header>
+
+  <div id="banner" class="banner hidden"></div>
+  <div id="recover" class="banner hidden">
+    An unfinished recording was found (<span id="recoverInfo"></span>).
+    <button id="recoverBtn">Process it</button> <button id="discardBtn">Discard</button>
+  </div>
+
+  <section class="card">
+    <div class="recorder">
+      <button id="rec" title="Start / stop (Space)">Record</button>
+      <div class="controls">
+        <div id="timer">0:00</div>
+        <div id="level"><div></div></div>
+        <label for="lang">Spoken language</label>
+        <select id="lang">
+          <option value="auto">Auto-detect</option>
+          <option value="ur">Urdu</option>
+          <option value="en">English</option>
+        </select>
+      </div>
+    </div>
+    <div class="drop" id="drop">Drop an existing recording here (m4a, mp3, wav, webm …) or
+      <label style="text-decoration:underline;cursor:pointer">choose a file<input type="file" id="file" accept="audio/*,video/*" hidden></label></div>
+  </section>
+
+  <section class="card" id="jobsCard">
+    <h2>Recordings</h2>
+    <div id="jobs"><div class="msg">Nothing yet. Press Record and start talking.</div></div>
+  </section>
+
+  <section class="card hidden" id="result">
+    <div class="tabs" id="tabs"></div>
+    <div id="out"></div>
+    <div style="margin-top:12px;display:flex;gap:8px;flex-wrap:wrap">
+      <button class="primary" id="copy">Copy</button>
+      <button id="copyAll">Copy whole note</button>
+    </div>
+    <div class="meta" id="meta"></div>
+  </section>
+
+  <section class="card hidden" id="settings">
+    <h2>Settings</h2>
+    <div class="grid">
+      <div class="full"><label>Obsidian vault folder (full path; empty = app folder)</label><input type="text" id="s_vault_dir" placeholder="/Users/you/Documents/Obsidian/MyVault"></div>
+      <div><label>Sub-folder for notes</label><input type="text" id="s_notes_subfolder"></div>
+      <div><label>Tags (comma separated)</label><input type="text" id="s_tags"></div>
+      <div><label>Whisper model</label><select id="s_asr_model">
+        <option value="large-v3-turbo">large-v3-turbo (fast, recommended)</option>
+        <option value="large-v3">large-v3 (most accurate, slower)</option>
+        <option value="medium">medium</option><option value="small">small</option>
+        <option value="base">base</option><option value="tiny">tiny</option></select></div>
+      <div><label>Speech engine</label><select id="s_asr_backend">
+        <option value="auto">Automatic</option><option value="mlx">MLX (Apple GPU)</option>
+        <option value="faster-whisper">faster-whisper (CPU)</option><option value="sherpa-onnx">sherpa-onnx (CPU)</option></select></div>
+      <div><label>Urdu → English translation</label><select id="s_translator">
+        <option value="llm">Local AI (Ollama) – best, offline</option>
+        <option value="whisper">Whisper built-in – offline, rougher</option>
+        <option value="google">Google Translate – online</option>
+        <option value="none">Don't translate</option></select></div>
+      <div><label>Local AI model (Ollama)</label><input type="text" id="s_llm_model"></div>
+      <div><label>Ollama address</label><input type="text" id="s_ollama_url"></div>
+      <div><label>Default spoken language</label><select id="s_language">
+        <option value="auto">Auto-detect</option><option value="ur">Urdu</option><option value="en">English</option></select></div>
+      <div class="check"><input type="checkbox" id="s_clean_text"><label for="s_clean_text" style="margin:0">Fix grammar &amp; structure</label></div>
+      <div class="check"><input type="checkbox" id="s_extract_insights"><label for="s_extract_insights" style="margin:0">Extract key points &amp; to-dos</label></div>
+      <div class="check"><input type="checkbox" id="s_keep_audio"><label for="s_keep_audio" style="margin:0">Keep audio recordings</label></div>
+    </div>
+    <div style="margin-top:14px;display:flex;gap:10px;align-items:center">
+      <button class="primary" id="saveSettings">Save</button><span id="saved" class="msg"></span>
+    </div>
+  </section>
+</main>
+
+<script>
+const $ = (id) => document.getElementById(id);
+const api = async (path, opts = {}) => {
+  const r = await fetch(path, opts);
+  if (!r.ok) throw new Error((await r.json().catch(() => ({}))).detail || r.statusText);
+  return r.json();
+};
+
+// ---------------------------------------------------------------- status
+async function refreshStatus() {
+  try {
+    const s = await api("/api/status");
+    const b = $("banner");
+    if (!s.ollama) {
+      b.innerHTML = "Local AI (Ollama) is not running, so translation falls back to Whisper and grammar cleanup is skipped. Start it with <code>ollama serve</code> or open the Ollama app.";
+    } else if (!s.llm_model_installed) {
+      b.innerHTML = `The AI model <b>${s.llm_model}</b> is not downloaded yet. Run <code>ollama pull ${s.llm_model}</code> in Terminal.`;
+    } else if (!s.backends.length) {
+      b.innerHTML = "No speech engine is installed. See the setup guide.";
+    } else { b.classList.add("hidden"); return; }
+    b.classList.remove("hidden");
+  } catch (e) { /* server restarting */ }
+}
+
+// ---------------------------------------------------------------- crash-safe recording store (IndexedDB)
+const DB = { db: null };
+function openDB() {
+  return new Promise((res) => {
+    try {
+      const req = indexedDB.open("voicenotes", 1);
+      req.onupgradeneeded = () => req.result.createObjectStore("chunks", { autoIncrement: true });
+      req.onsuccess = () => { DB.db = req.result; res(); };
+      req.onerror = () => res();
+    } catch (e) { res(); }
+  });
+}
+function dbTx(mode, fn) {
+  return new Promise((res) => {
+    if (!DB.db) return res(null);
+    const tx = DB.db.transaction("chunks", mode); const st = tx.objectStore("chunks");
+    const out = fn(st); tx.oncomplete = () => res(out && out.result); tx.onerror = () => res(null);
+  });
+}
+const dbAdd = (blob) => dbTx("readwrite", (s) => s.add(blob));
+const dbAll = () => dbTx("readonly", (s) => s.getAll());
+const dbClear = () => dbTx("readwrite", (s) => s.clear());
+
+// ---------------------------------------------------------------- recorder
+let rec = null, chunks = [], started = 0, tick = null, stream = null, analyser = null;
+const mimeType = ["audio/webm;codecs=opus", "audio/mp4", "audio/webm"].find((t) => window.MediaRecorder && MediaRecorder.isTypeSupported(t)) || "";
+const ext = mimeType.includes("mp4") ? "m4a" : "webm";
+
+function fmt(sec) { sec = Math.floor(sec); const h = Math.floor(sec / 3600), m = Math.floor(sec % 3600 / 60), s = sec % 60;
+  return (h ? h + ":" + String(m).padStart(2, "0") : m) + ":" + String(s).padStart(2, "0"); }
+
+async function startRec() {
+  try { stream = await navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: true, noiseSuppression: true } }); }
+  catch (e) { alert("Microphone access was denied: " + e.message); return; }
+  await dbClear();
+  chunks = [];
+  rec = new MediaRecorder(stream, mimeType ? { mimeType, audioBitsPerSecond: 48000 } : undefined);
+  rec.ondataavailable = (e) => { if (e.data.size) { chunks.push(e.data); dbAdd(e.data); } };
+  rec.onstop = finishRec;
+  rec.start(5000); // flush every 5 s so a crash loses at most a few seconds
+  started = Date.now();
+  $("rec").textContent = "Stop"; $("rec").classList.add("on");
+  tick = setInterval(() => $("timer").textContent = fmt((Date.now() - started) / 1000), 500);
+  const ctx = new AudioContext(); analyser = ctx.createAnalyser(); analyser.fftSize = 512;
+  ctx.createMediaStreamSource(stream).connect(analyser);
+  const buf = new Uint8Array(analyser.fftSize);
+  (function meter() { if (!rec || rec.state !== "recording") { $("level").firstChild.style.width = "0"; ctx.close(); return; }
+    analyser.getByteTimeDomainData(buf); let peak = 0; for (const v of buf) peak = Math.max(peak, Math.abs(v - 128));
+    $("level").firstChild.style.width = Math.min(100, peak / 0.9) + "%"; requestAnimationFrame(meter); })();
+}
+function stopRec() { if (rec && rec.state === "recording") rec.stop(); stream && stream.getTracks().forEach((t) => t.stop()); }
+async function finishRec() {
+  clearInterval(tick); $("rec").textContent = "Record"; $("rec").classList.remove("on");
+  const blob = new Blob(chunks, { type: mimeType || "audio/webm" });
+  const name = `recording-${new Date().toISOString().slice(0, 16).replace(/[:T]/g, "-")}.${ext}`;
+  rec = null;
+  try { await upload(blob, name); await dbClear(); }
+  catch (e) { alert("Upload failed (the recording is kept in the browser; reload to retry): " + e.message); }
+}
+$("rec").onclick = () => (rec ? stopRec() : startRec());
+document.addEventListener("keydown", (e) => {
+  if (e.code === "Space" && !["INPUT", "SELECT", "TEXTAREA"].includes(document.activeElement.tagName)) { e.preventDefault(); $("rec").click(); }
+});
+
+async function checkRecovery() {
+  await openDB();
+  const left = await dbAll();
+  if (left && left.length) {
+    const blob = new Blob(left, { type: left[0].type || "audio/webm" });
+    $("recoverInfo").textContent = (blob.size / 1e6).toFixed(1) + " MB";
+    $("recover").classList.remove("hidden");
+    $("recoverBtn").onclick = async () => { await upload(blob, `recovered.${ext}`); await dbClear(); $("recover").classList.add("hidden"); };
+    $("discardBtn").onclick = async () => { await dbClear(); $("recover").classList.add("hidden"); };
+  }
+}
+
+// ---------------------------------------------------------------- upload + jobs
+async function upload(blob, name) {
+  const fd = new FormData(); fd.append("file", blob, name); fd.append("language", $("lang").value);
+  const job = await api("/api/jobs", { method: "POST", body: fd });
+  selected = job.id; pollJobs();
+}
+$("file").onchange = (e) => { for (const f of e.target.files) upload(f, f.name); e.target.value = ""; };
+const drop = $("drop");
+drop.ondragover = (e) => { e.preventDefault(); drop.classList.add("over"); };
+drop.ondragleave = () => drop.classList.remove("over");
+drop.ondrop = (e) => { e.preventDefault(); drop.classList.remove("over"); for (const f of e.dataTransfer.files) upload(f, f.name); };
+
+let selected = null, poller = null, lastShown = null;
+const esc = (s) => String(s ?? "").replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+async function pollJobs() {
+  let list; try { list = await api("/api/jobs"); } catch (e) { return; }
+  if (list.length) $("jobs").innerHTML = list.map((j) => `
+    <div class="job" data-id="${j.id}">
+      <div class="name"><b>${esc(j.result?.insights?.title || j.filename)}</b><div class="msg ${j.status === "error" ? "err" : ""}">${esc(j.status === "error" ? j.error : j.message)}</div></div>
+      ${j.status === "error" ? `<button data-retry="${j.id}">Retry</button>` : `<div class="bar"><div style="width:${Math.round(j.progress * 100)}%"></div></div>`}
+    </div>`).join("");
+  document.querySelectorAll(".job").forEach((el) => el.onclick = () => { selected = el.dataset.id; lastShown = null; show(list); });
+  document.querySelectorAll("[data-retry]").forEach((el) => el.onclick = async (e) => {
+    e.stopPropagation(); const j = await api(`/api/jobs/${el.dataset.retry}/retry`, { method: "POST" }); selected = j.id; pollJobs(); });
+  show(list);
+  const busy = list.some((j) => j.status === "queued" || j.status === "running");
+  clearTimeout(poller); poller = setTimeout(pollJobs, busy ? 1000 : 5000);
+}
+
+// ---------------------------------------------------------------- result view
+let tab = "clean", current = null;
+function sections(r) {
+  const t = [];
+  const todos = r.insights.action_items.map((a) => "☐ " + a).join("\n");
+  const points = r.insights.key_points.map((a) => "• " + a).join("\n");
+  if (r.clean) t.push(["clean", "Clean notes", r.clean]);
+  if (todos || points) t.push(["points", "Key points & to-dos", (todos ? "To-dos\n" + todos + "\n\n" : "") + (points ? "Key points\n" + points : "")]);
+  if (r.language === "ur" && r.english) t.push(["english", "English translation", r.english]);
+  t.push(["original", r.language === "ur" ? "Original (Urdu)" : "Transcript", r.original]);
+  return t;
+}
+function show(list) {
+  const j = list.find((x) => x.id === selected && x.status === "done");
+  if (!j) return;
+  if (lastShown === j.id) return;
+  lastShown = j.id; current = j.result;
+  const secs = sections(current);
+  if (!secs.find((s) => s[0] === tab)) tab = secs[0][0];
+  $("tabs").innerHTML = secs.map(([k, label]) => `<button data-tab="${k}" class="${k === tab ? "active" : ""}">${label}</button>`).join("");
+  document.querySelectorAll("[data-tab]").forEach((b) => b.onclick = () => { tab = b.dataset.tab; lastShown = null; show(list); });
+  const s = secs.find((x) => x[0] === tab);
+  $("out").textContent = s[2];
+  $("out").dir = tab === "original" && current.language === "ur" ? "rtl" : "ltr";
+  $("meta").innerHTML = (current.note_path ? "Saved to " + esc(current.note_path) : "") +
+    (current.warnings.length ? "<br>⚠️ " + current.warnings.map(esc).join("<br>⚠️ ") : "");
+  $("result").classList.remove("hidden");
+}
+async function copy(text, btn) { await navigator.clipboard.writeText(text); const t = btn.textContent; btn.textContent = "Copied ✓"; setTimeout(() => btn.textContent = t, 1200); }
+$("copy").onclick = () => copy($("out").textContent, $("copy"));
+$("copyAll").onclick = () => copy(sections(current).map(([, l, t]) => "## " + l + "\n\n" + t).join("\n\n"), $("copyAll"));
+
+// ---------------------------------------------------------------- settings
+const FIELDS = ["vault_dir", "notes_subfolder", "tags", "asr_model", "asr_backend", "translator", "llm_model", "ollama_url", "language", "clean_text", "extract_insights", "keep_audio"];
+async function loadSettings() {
+  const s = await api("/api/settings");
+  for (const f of FIELDS) { const el = $("s_" + f); if (el.type === "checkbox") el.checked = s[f]; else el.value = s[f]; }
+  $("lang").value = s.language;
+}
+$("settingsBtn").onclick = () => { $("settings").classList.toggle("hidden"); loadSettings(); };
+$("saveSettings").onclick = async () => {
+  const body = {}; for (const f of FIELDS) { const el = $("s_" + f); body[f] = el.type === "checkbox" ? el.checked : el.value.trim(); }
+  try { await api("/api/settings", { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
+    $("saved").textContent = "Saved ✓"; $("lang").value = body.language; refreshStatus(); }
+  catch (e) { $("saved").textContent = "Error: " + e.message; }
+  setTimeout(() => $("saved").textContent = "", 2500);
+};
+
+if (!window.MediaRecorder) { $("rec").disabled = true; $("rec").title = "This browser cannot record audio"; }
+loadSettings(); refreshStatus(); checkRecovery(); pollJobs(); setInterval(refreshStatus, 15000);
+</script>
+</body>
+</html>

@@ -68,7 +68,8 @@ class SherpaOnnxTranscriber(Transcriber):
 
     def _decode(self, rec, samples: np.ndarray):
         stream = rec.create_stream()
-        stream.accept_waveform(SAMPLE_RATE, samples)
+        # Trailing silence stops the decoder from dropping the last words.
+        stream.accept_waveform(SAMPLE_RATE, np.concatenate([samples, np.zeros(SAMPLE_RATE, np.float32)]))
         rec.decode_stream(stream)
         return stream.result
 

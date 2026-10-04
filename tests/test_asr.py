@@ -95,5 +95,5 @@ def test_real_urdu_transcription_is_urdu_script(real):
     text = real.transcribe(load_audio(AUDIO / "urdu_todo.wav"), "ur").text
     arabic_letters = sum("؀" <= c <= "ۿ" for c in text)
     assert arabic_letters > 0.6 * len(text.replace(" ", ""))
-    for word in ["کاروبار", "بہن", "فون", "بازار"]:
+    for word in ["کاروبار", "بہن", "فون", "بازار", "خریدنی"]:  # last word must not be cut off
         assert word in text, (word, text)

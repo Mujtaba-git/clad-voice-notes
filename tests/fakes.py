@@ -44,6 +44,9 @@ class FakeLLM:
     def is_available(self):
         return self.available
 
+    def has_model(self):
+        return self.available
+
 
 def silence(seconds=1.0):
     return np.zeros(int(16000 * seconds), np.float32)
